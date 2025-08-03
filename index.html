@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Mô phỏng chứng minh diện tích hình tròn</title>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']]
+      },
+      startup: {
+        ready() {
+          MathJax.startup.defaultReady();
+        }
+      }
+    };
+
+    // Fallback for MathJax loading failure
+    function handleMathJaxError() {
+      console.warn('MathJax failed to load, using fallback rendering');
+      window.MathJax = {
+        typesetPromise: function() {
+          return Promise.resolve();
+        }
+      };
+      // Simple fallback rendering for basic math
+      setTimeout(function() {
+        renderMathFallback();
+      }, 100);
+    }
+
+    function renderMathFallback() {
+      // Simple text-based fallback for when MathJax fails
+      const elements = document.querySelectorAll('[id*="area"], [id*="lim"], [id*="conclusion"], [id*="biendoi"]');
+      elements.forEach(function(el) {
+        if (el.innerHTML.includes('\\[') || el.innerHTML.includes('\\(')) {
+          // Convert basic LaTeX to readable text
+          let text = el.innerHTML
+            .replace(/\\\[/g, '')
+            .replace(/\\\]/g, '')
+            .replace(/\\\(/g, '')
+            .replace(/\\\)/g, '')
+            .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+            .replace(/\\sin/g, 'sin')
+            .replace(/\\pi/g, 'π')
+            .replace(/\\left\(/g, '(')
+            .replace(/\\right\)/g, ')')
+            .replace(/\\cdot/g, '×')
+            .replace(/\\text\{([^}]+)\}/g, '$1');
+          el.innerHTML = text;
+        }
+      });
+    }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"
+          integrity="sha512-6FaAxxHuKuzaGHWnV00ftWqP3luSBRSopnNAA2RvQH1fOfnF/A1wOfiUWF7cLIOFcfb1dEhXwo5VG3DAisocRw=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"
+          onload="console.log('MathJax loaded successfully')"
+          onerror="handleMathJaxError()"></script>
+  <style>
+    /* ... tất cả style giữ nguyên ... */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+      padding: 40px;
+      backdrop-filter: blur(10px);
+    }
+
+    h2 {
+      color: #2d3748;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 700;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .control-panel {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8fafc;
+      border-radius: 16px;
+      border: 2px solid #e2e8f0;
+    }
+
+    .flex {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+    }
+
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      border: 3px solid #e2e8f0;
+      transition: transform 0.3s ease;
+    }
+
+    canvas:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+
+    .math-section {
+      flex: 1;
+      min-width: 320px;
+      max-width: 500px;
+    }
+
+    .math-block {
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 20px 0;
+      font-size: 16px;
+      border-left: 4px solid #5b21b6;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+
+    .result {
+      font-weight: bold;
+      font-size: 20px;
+      color: #047857;
+      background: #ecfdf5;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #047857;
+      display: inline-block;
+      /* Đảm bảo không bị tách dòng */
+      vertical-align: middle;
+    }
+
+    label {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    input[type=range] {
+      width: 200px;
+      height: 8px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      outline: none;
+      margin: 0 10px;
+      transition: background 0.3s ease;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #5b21b6;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      background: #7c3aed;
+      transform: scale(1.1);
+    }
+
+    .slider-value {
+      display: inline-block;
+      min-width: 30px;
+      font-weight: bold;
+      color: #5b21b6;
+      font-size: 20px;
+    }
+
+    .note {
+      color: #64748b;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    .math-item {
+      margin-bottom: 16px;
+      padding: 12px 0;
+    }
+
+    .math-item b {
+      color: #2d3748;
+      display: inline;
+      margin-bottom: 8px;
+      vertical-align: middle;
+    }
+    .math-item .inline-math {
+      display: inline;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .loading {
+      text-align: center;
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .error {
+      background: #fef2f2;
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #dc2626;
+      margin: 10px 0;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .container {
+        padding: 20px;
+      }
+
+      .flex {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      canvas {
+        width: 100%;
+        max-width: 350px;
+        height: auto;
+      }
+
+      input[type=range] {
+        width: 150px;
+      }
+
+      .math-block {
+        font-size: 14px;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 15px;
+        margin: 10px;
+      }
+
+      canvas {
+        max-width: 280px;
+      }
+
+      .math-block {
+        padding: 16px;
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Chứng minh diện tích hình tròn bằng cách chia đa giác nội tiếp</h2>
+
+  <div class="control-panel">
+    <label for="n">Số cạnh đa giác nội tiếp (n):</label>
+    <input type="range" id="n" min="3" max="120" value="4" step="1"
+           oninput="update()"
+           aria-describedby="n-description"
+           aria-label="Số cạnh đa giác nội tiếp">
+    <span id="n-val" class="slider-value" aria-live="polite">4</span>
+    <div class="note" id="n-description">
+      (Tăng số n để tiến gần tới hình tròn, max 120)
+    </div>
+  </div>
+
+  <div class="flex">
+    <div class="canvas-container">
+      <canvas id="circle-canvas" width="410" height="410"
+              role="img"
+              aria-label="Visualization of circle area proof using inscribed polygon"></canvas>
+    </div>
+
+    <div class="math-section">
+      <div class="math-block">
+        <div class="math-item">
+          <b>Bán kính hình tròn:</b>
+          <span class="inline-math">\(R\)</span>
+        </div>
+
+        <div class="math-item">
+          <b>Diện tích 1 tam giác:</b>
+          <div id="one-triangle-area" class="loading">Đang tải công thức...</div>
+        </div>
+
+        <div class="math-item">
+          <b>Tổng diện tích n tam giác:</b>
+          <div id="total-area" class="loading">Đang tải công thức...</div>
+        </div>
+
+        <div class="math-item">
+          <b>Biến đổi biểu thức:</b>
+          <div id="biendoi" class="loading">Đang tải công thức...</div>
+        </div>
+
+        <div class="math-item">
+          <b id="lim-label">Khi n = 4 thì:</b>
+          <div id="lim" class="loading">Đang tải công thức...</div>
+        </div>
+
+        <div class="math-item">
+          <b>Kết luận:</b>
+          <span id="conclusion" class="loading">Đang tải kết quả...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ... giữ nguyên toàn bộ mã JS ...
+// Constants and configuration
+const CONFIG = {
+  RADIUS: 150,
+  CENTER_X: 205,
+  CENTER_Y: 205,
+  CANVAS_SIZE: 410,
+  MIN_SIDES: 3,
+  MAX_SIDES: 120,
+  PRECISION: 100000
+};
+
+// Global variables
+let canvas, ctx;
+let isInitialized = false;
+
+// Utility functions
+function round5(x) {
+  return Math.round(x * CONFIG.PRECISION) / CONFIG.PRECISION;
+}
+
+function validateInput(n) {
+  const num = parseInt(n);
+  if (isNaN(num) || num < CONFIG.MIN_SIDES || num > CONFIG.MAX_SIDES) {
+    showError(`Số cạnh phải từ ${CONFIG.MIN_SIDES} đến ${CONFIG.MAX_SIDES}`);
+    return false;
+  }
+  return true;
+}
+
+function showError(message) {
+  console.error(message);
+  // Could add UI error display here
+}
+
+function showLoading(elementId) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.innerHTML = '<span class="loading">Đang tính toán...</span>';
+  }
+}
+
+// Canvas drawing functions
+function initializeCanvas() {
+  canvas = document.getElementById('circle-canvas');
+  if (!canvas) {
+    showError('Canvas element not found');
+    return false;
+  }
+
+  ctx = canvas.getContext('2d');
+  if (!ctx) {
+    showError('Unable to get canvas context');
+    return false;
+  }
+
+  return true;
+}
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, CONFIG.CANVAS_SIZE, CONFIG.CANVAS_SIZE);
+}
+
+function drawCircle() {
+  ctx.strokeStyle = "#4f46e5";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(CONFIG.CENTER_X, CONFIG.CENTER_Y, CONFIG.RADIUS, 0, 2 * Math.PI);
+  ctx.stroke();
+}
+
+function calculatePolygonPoints(n) {
+  const points = [];
+  for (let i = 0; i < n; i++) {
+    const angle = 2 * Math.PI * i / n - Math.PI / 2;
+    const x = CONFIG.CENTER_X + CONFIG.RADIUS * Math.cos(angle);
+    const y = CONFIG.CENTER_Y + CONFIG.RADIUS * Math.sin(angle);
+    points.push([x, y]);
+  }
+  return points;
+}
+
+function drawPolygon(points) {
+  ctx.strokeStyle = "#a21caf";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i][0], points[i][1]);
+  }
+  ctx.closePath();
+  ctx.stroke();
+}
+
+function drawTriangles(points) {
+  const n = points.length;
+
+  // Fill triangles with alternating colors
+  ctx.globalAlpha = 0.2;
+  for (let i = 0; i < n; i++) {
+    ctx.beginPath();
+    ctx.moveTo(CONFIG.CENTER_X, CONFIG.CENTER_Y);
+    ctx.lineTo(points[i][0], points[i][1]);
+    ctx.lineTo(points[(i + 1) % n][0], points[(i + 1) % n][1]);
+    ctx.closePath();
+    ctx.fillStyle = i % 2 === 0 ? "#6366f1" : "#a855f7";
+    ctx.fill();
+  }
+
+  // Draw triangle edges
+  ctx.globalAlpha = 1.0;
+  ctx.strokeStyle = "#374151";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < n; i++) {
+    ctx.beginPath();
+    ctx.moveTo(CONFIG.CENTER_X, CONFIG.CENTER_Y);
+    ctx.lineTo(points[i][0], points[i][1]);
+    ctx.stroke();
+  }
+}
+
+function drawCenterPoint() {
+  ctx.fillStyle = "#dc2626";
+  ctx.beginPath();
+  ctx.arc(CONFIG.CENTER_X, CONFIG.CENTER_Y, 5, 0, 2 * Math.PI);
+  ctx.fill();
+
+  ctx.fillStyle = "#374151";
+  ctx.font = "bold 18px Arial";
+  ctx.fillText("O", CONFIG.CENTER_X + 10, CONFIG.CENTER_Y - 10);
+}
+
+// Mathematical calculation functions
+function calculateTriangleArea(n) {
+  const theta = 2 * Math.PI / n;
+  return 0.5 * CONFIG.RADIUS * CONFIG.RADIUS * Math.sin(theta);
+}
+
+function calculateTotalArea(n) {
+  return n * calculateTriangleArea(n);
+}
+
+function calculateLimitValue(n) {
+  const theta = 2 * Math.PI / n;
+  return Math.sin(theta) / theta;
+}
+
+// MathJax rendering functions
+function updateMathContent() {
+  const n = parseInt(document.getElementById('n').value);
+
+  if (!validateInput(n)) return;
+
+  // Show loading states
+  showLoading('one-triangle-area');
+  showLoading('total-area');
+  showLoading('biendoi');
+  showLoading('lim');
+  showLoading('conclusion');
+
+  try {
+    // Update formulas
+    document.getElementById('one-triangle-area').innerHTML =
+      '\\[ S_{1\\triangle} = \\frac{1}{2} R^2 \\sin\\left(\\frac{2\\pi}{n}\\right) \\]';
+
+    document.getElementById('total-area').innerHTML =
+      '\\[ S_{\\text{tổng}} = n \\cdot S_{1\\triangle} = \\frac{n}{2} R^2 \\sin\\left(\\frac{2\\pi}{n}\\right) \\]';
+
+    document.getElementById('biendoi').innerHTML =
+      '\\[ S_{\\text{tổng}} = \\frac{n}{2} R^2 \\sin\\left(\\frac{2\\pi}{n}\\right) = \\pi R^2 \\cdot \\frac{\\sin\\left(\\frac{2\\pi}{n}\\right)}{\\frac{2\\pi}{n}} \\]';
+
+    // Calculate current values
+    const limitValue = calculateLimitValue(n);
+    const roundedLimit = round5(limitValue);
+
+    document.getElementById('lim-label').innerHTML = `Khi n = ${n} thì:`;
+    document.getElementById('lim').innerHTML =
+      '\\[ \\frac{\\sin\\left(\\frac{2\\pi}{' + n + '}\\right)}{\\frac{2\\pi}{' + n + '}} = ' + roundedLimit + ' \\]';
+
+    // Kết luận: Luôn đặt trong 1 span .result và không xuống dòng
+    const conclusionText = n >= 60
+      ? '<small style="display:block;margin-top:4px;">Khi n đủ lớn, hệ số tiến về 1: \\( S_{\\text{tổng}} \\to \\pi R^2 \\)</small>'
+      : '';
+
+    // Đảm bảo LaTeX và dấu ngoặc không bị tách dòng ở mọi trình duyệt
+    document.getElementById('conclusion').innerHTML =
+      `<span class="result">\\( S_{\\text{tổng}} = ${roundedLimit}\\, \\pi R^2 \\)</span>${conclusionText}`;
+
+    // Render math with error handling
+    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+      MathJax.typesetPromise().catch(function(err) {
+        console.error('MathJax rendering error:', err);
+        renderMathFallback();
+      });
+    } else {
+      console.warn('MathJax not available, using fallback');
+      renderMathFallback();
+    }
+
+  } catch (error) {
+    console.error('Error updating math content:', error);
+    showError('Lỗi cập nhật nội dung toán học');
+  }
+}
+
+// Main update function
+function update() {
+  const nInput = document.getElementById('n');
+  const nValue = document.getElementById('n-val');
+
+  if (!nInput || !nValue) {
+    showError('Input elements not found');
+    return;
+  }
+
+  const n = parseInt(nInput.value);
+
+  if (!validateInput(n)) {
+    return;
+  }
+
+  // Update display
+  nValue.textContent = n;
+
+  try {
+    // Clear and redraw canvas
+    clearCanvas();
+
+    // Calculate polygon points
+    const points = calculatePolygonPoints(n);
+
+    // Draw all elements
+    drawCircle();
+    drawPolygon(points);
+    drawTriangles(points);
+    drawCenterPoint();
+
+    // Update mathematical content
+    updateMathContent();
+
+  } catch (error) {
+    console.error('Error during update:', error);
+    showError('Lỗi cập nhật visualization');
+  }
+}
+
+// Initialization function
+function initialize() {
+  try {
+    if (!initializeCanvas()) {
+      throw new Error('Canvas initialization failed');
+    }
+
+    // Add keyboard support for range input
+    const rangeInput = document.getElementById('n');
+    if (rangeInput) {
+      rangeInput.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          setTimeout(update, 10); // Small delay to let the value update
+        }
+      });
+    }
+
+    isInitialized = true;
+    update();
+
+  } catch (error) {
+    console.error('Initialization error:', error);
+    showError('Lỗi khởi tạo ứng dụng');
+  }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initialize);
+} else {
+  initialize();
+}
+
+// Fallback initialization for older browsers
+window.addEventListener('load', function() {
+  if (!isInitialized) {
+    initialize();
+  }
+});
+</script>
+</body>
+</html>
